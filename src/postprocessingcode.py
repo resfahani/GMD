@@ -3,18 +3,21 @@ import scipy as sp
 
 from sklearn.model_selection import train_test_split
 from scipy.interpolate import griddata
+import scipy.ndimage as ndimage
 
 
 def findfreq(freq, freq_value):
     
     i = (np.abs(freq - freq_value)).argmin()
 
-    return freq[i], i 
+    return freq[i], i
+
 
 def Gen_bins(amin, amax, n):
     # Generate linear bins
     
     return np.linspace(amin, amax, n )
+
 
 def binning(err, a, offset, binnum, freqindx):
     
@@ -43,23 +46,30 @@ def binning(err, a, offset, binnum, freqindx):
     return bins, stdv, meanv
 
 
-def Manifold_Interpolation(bt, md):
+def Manifold_Interpolation(bt, md, numsample = 100, smoothing = 0.1):
     
     #Generate Grid in the bottleneck between min and max values
-    bt1 = np.linspace(bt[:,0].min(), bt[:,0].max(), 200)
-    bt2 = np.linspace(bt[:,1].min(), bt[:,1].max(), 200)
+    bt1 = np.linspace(bt[:,0].min(), bt[:,0].max(), numsample)
+    bt2 = np.linspace(bt[:,1].min(), bt[:,1].max(), numsample)
 
     xi, yi = np.meshgrid(bt1,bt2)
 
-    #interpolate the manifold on the liniear sample grids
+    #interpolate the manifold on the linear sample grids
+
     c1M = griddata((bt[:,0], bt[:,1]), md[:,0], (xi, yi), method = 'cubic')
     c2R = griddata((bt[:,0], bt[:,1]), md[:,1], (xi, yi), method = 'cubic')
 
     c1M = np.round(c1M,2)
     c2R = np.round(c2R,2)
     
-    c1M = sp.ndimage.gaussian_filter(c1M, 0.1)
-    c2R = sp.ndimage.gaussian_filter(c2R, 0.1)
+
+    c1M = sp.ndimage.median_filter(c1M, size= smoothing)
+    c2R = sp.ndimage.median_filter(c2R, size= smoothing)
+
+    #c1M = sp.ndimage.gaussian_filter(c1M, smoothing)
+    #c2R = sp.ndimage.gaussian_filter(c2R, smoothing)
+
+
 
     return c1M, c2R, bt1, bt2
 
@@ -74,10 +84,10 @@ def Select2D(a, var, interval, mode="linear"):
         return  ((np.where(a < var*interval, 1, 0)) & (np.where(a > var/interval, 1, 0)))
 
 
-def Manifoldsampling(mfM, mfR, bt1, bt2, model_dec,  M, Minterval, R, Rinterval):
+def Manifoldsampling(mfM, mfR, bt1, bt2, model_dec,  M, Minterval, R, Rinterval, intervaltype = ['linear', 'exp']):
     
-    indMbt = Select2D(mfM, M, Minterval)
-    indRbt = Select2D(mfR, R, Rinterval, mode = 'exp')
+    indMbt = Select2D(mfM, M, Minterval, mode = intervaltype[0])
+    indRbt = Select2D(mfR, R, Rinterval, mode = intervaltype[1])
     
     indx1 = indMbt * indRbt
     indx = np.where(indx1 ==1)
@@ -87,9 +97,9 @@ def Manifoldsampling(mfM, mfR, bt1, bt2, model_dec,  M, Minterval, R, Rinterval)
     nodm1[:,1] = bt2[indx[0]]
 
     if len(nodm1[:,0]) ==1:
-        cm1 = model_dec.predict(nodm1[0,:][:,np.newaxis].T)
+        cm1 = model_dec.predict(nodm1[0,:][:,np.newaxis].T, verbose = False)
     else:
-        cm1 = model_dec.predict(nodm1)
+        cm1 = model_dec.predict(nodm1, verbose = False)
     
     return indx1, indMbt + indRbt, cm1
 

@@ -8,20 +8,26 @@ from tensorflow.keras import optimizers
 from tensorflow.keras.layers import BatchNormalization
 
 from tensorflow.keras import regularizers , initializers
-import tensorflow.keras
+import tensorflow.keras 
+
+import tensorflow.keras as k
+import random 
 
 
 def AEModel( latent_dim, original_dim =84, alpha = 1e-2):
     use_bias = True
-    dim1 = 20
-    dim2 = 15
+    dim1 = 15
+    dim2 = 10
     latent_dim = latent_dim
+
+    #Seed = k.utils.set_random_seed(seed=random.randint(1,10000))
 
     x = Input(shape=(original_dim,))
     
     reg = regularizers.l2(alpha)
 
-    intit = initializers.RandomNormal(mean=0.0, stddev = 0.05, seed=None)
+    intit = initializers.RandomNormal(mean=0.0, stddev = 0.2)
+    #  "random_normal" 
     
     enc = Dense(dim1, activation="elu", 
               use_bias=use_bias, kernel_regularizer=reg,
